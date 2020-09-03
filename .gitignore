@@ -22,3 +22,6 @@ cmake-build-*/
 build-*/
 thirdparty/build-*/
 thirdparty/build-*
+
+
+li_calib_data/

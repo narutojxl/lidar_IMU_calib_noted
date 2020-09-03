@@ -49,6 +49,8 @@ public:
     VPointCloud cloud_inlier;
   };
 
+
+
   explicit SurfelAssociation(double associated_radius = 0.05,
                              double plane_lambda = 0.7)
           : associated_radius_(associated_radius),

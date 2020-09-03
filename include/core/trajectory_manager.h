@@ -67,15 +67,18 @@ public:
             map_time_(0),
             imu_(std::make_shared<IMUSensor>()),
             lidar_(std::make_shared<LiDARSensor>()),
-            calib_param_manager(std::make_shared<CalibParamManager>()) {
+            calib_param_manager(std::make_shared<CalibParamManager>()) {//TODO: 在构造函数中需要设置自己imu的参数
     assert(knot_distance > 0 && "knot_distance should be lager than 0");
 
     double traj_start_time = start_time - time_offset_padding;
     double traj_end_time = end_time + time_offset_padding;
+    
     traj_ = std::make_shared<kontiki::trajectories::SplitTrajectory>
             (knot_distance, knot_distance, traj_start_time, traj_start_time);
+            
     initialTrajTo(traj_end_time);
   }
+
 
   void initialTrajTo(double max_time);
 
@@ -130,13 +133,15 @@ private:
 
   double map_time_;
   double time_offset_padding_;
-  std::shared_ptr<kontiki::trajectories::SplitTrajectory> traj_;
+  std::shared_ptr<kontiki::trajectories::SplitTrajectory> traj_; //imu旋转B样条、imu平移B样条
+
   std::shared_ptr<kontiki::sensors::ConstantBiasImu> imu_;
+
   std::shared_ptr<kontiki::sensors::VLP16LiDAR> lidar_;
 
   CalibParamManager::Ptr calib_param_manager;
 
-  std::vector<IO::IMUData> imu_data_;
+  std::vector<IO::IMUData> imu_data_; //存放bag包中所有的imu信息
 
   Eigen::aligned_vector<Eigen::Vector3d> closest_point_vec_;
 

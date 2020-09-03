@@ -44,23 +44,24 @@ LiDAROdometry::ndtInit(double ndt_resolution) {
 
 void LiDAROdometry::feedScan(double timestamp,
                              VPointCloud::Ptr cur_scan,
-                             Eigen::Matrix4d pose_predict,
-                             const bool update_map) {
+                             Eigen::Matrix4d pose_predict, //default: I
+                             const bool update_map) { //default: true
   OdomData odom_cur;
   odom_cur.timestamp = timestamp;
   odom_cur.pose = Eigen::Matrix4d::Identity();
 
   VPointCloud::Ptr scan_in_target(new VPointCloud());
-  if (map_cloud_->empty()) {
+  if (map_cloud_->empty()) {//第一帧在updateKeyScan()中赋值后，就变为not empty
     scan_in_target = cur_scan;
   } else {
     Eigen::Matrix4d T_LtoM_predict = odom_data_.back().pose * pose_predict;
-    registration(cur_scan, T_LtoM_predict, odom_cur.pose, scan_in_target);
+    registration(cur_scan, T_LtoM_predict, odom_cur.pose, scan_in_target); //map[first scan, curr scan)累积起来
+                                                                           //计算map和curr scan的ndt匹配
   }
-  odom_data_.push_back(odom_cur);
+  odom_data_.push_back(odom_cur); //把map--->curr TF保存到odom_data_
 
-  if (update_map) {
-    updateKeyScan(cur_scan, odom_cur);
+  if (update_map) { 
+    updateKeyScan(cur_scan, odom_cur); //构建map
   }
 }
 
@@ -79,22 +80,23 @@ void LiDAROdometry::registration(const VPointCloud::Ptr& cur_scan,
 
 void LiDAROdometry::updateKeyScan(const VPointCloud::Ptr& cur_scan,
                                   const OdomData& odom_data) {
-  if (checkKeyScan(odom_data)) {
+  if (checkKeyScan(odom_data)) {//当前帧与上一关键帧的距离或角度超过一定阈值，当前帧为新的关键帧，才对地图做更新
 
     VPointCloud::Ptr filtered_cloud(new VPointCloud());
-    downsampleCloud(cur_scan, filtered_cloud, 0.1);
+    downsampleCloud(cur_scan, filtered_cloud, 0.1); //leaf size
 
     VPointCloud::Ptr scan_in_target(new VPointCloud());
-    pcl::transformPointCloud(*filtered_cloud, *scan_in_target, odom_data.pose);
+    pcl::transformPointCloud(*filtered_cloud, *scan_in_target, odom_data.pose); //把当前帧转化到map下
 
     *map_cloud_ += *scan_in_target;
-    ndt_omp_->setInputTarget(map_cloud_);
-    key_frame_index_.push_back(odom_data_.size());
+    ndt_omp_->setInputTarget(map_cloud_); //TODO: ndt_omp的target点云是整个map
+    key_frame_index_.push_back(odom_data_.size()); //关键帧的index从1开始
   }
 }
 
+
 bool LiDAROdometry::checkKeyScan(const OdomData& odom_data) {
-  static Eigen::Vector3d position_last(0,0,0);
+  static Eigen::Vector3d position_last(0,0,0); //静态的局部变量
   static Eigen::Vector3d ypr_last(0,0,0);
 
   Eigen::Vector3d position_now = odom_data.pose.block<3,1>(0,3);
@@ -107,7 +109,7 @@ bool LiDAROdometry::checkKeyScan(const OdomData& odom_data) {
     delta_angle(i) = normalize_angle(delta_angle(i));
   delta_angle = delta_angle.cwiseAbs();
 
-  if (key_frame_index_.size() == 0 || dist > 0.2
+  if (key_frame_index_.size() == 0 || dist > 0.2 //key_frame_index_.size() == 0: 最开始的第一帧也是关键帧
      || delta_angle(0) > 5.0 || delta_angle(1) > 5.0 || delta_angle(2) > 5.0) {
     position_last = position_now;
     ypr_last = ypr;
@@ -115,6 +117,7 @@ bool LiDAROdometry::checkKeyScan(const OdomData& odom_data) {
   }
   return false;
 }
+
 
 void LiDAROdometry::setTargetMap(VPointCloud::Ptr map_cloud_in) {
   map_cloud_->clear();

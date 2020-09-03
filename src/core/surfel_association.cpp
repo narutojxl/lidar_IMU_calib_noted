@@ -47,6 +47,7 @@ void SurfelAssociation::clearSurfelMap() {
   spoints_all_.clear();
 }
 
+
 void SurfelAssociation::setSurfelMap(
         const pclomp::NormalDistributionsTransform<VPoint, VPoint>::Ptr& ndtPtr,
         double timestamp) {
@@ -57,7 +58,7 @@ void SurfelAssociation::setSurfelMap(
 
   // check each cell
   Eigen::Vector3i counter(0,0,0);
-  for (const auto &v : ndtPtr->getTargetCells().getLeaves()) {
+  for (const auto &v : ndtPtr->getTargetCells().getLeaves()) {//ndt_omp的target点云是整个map
     auto leaf = v.second;
 
     if (leaf.nr_points < 10)
@@ -182,11 +183,14 @@ void SurfelAssociation::averageDownSmaple(int num_points_max) {
     }
   }
 }
+
+
 void SurfelAssociation::averageTimeDownSmaple(int step) {
   for (size_t idx = 0; idx < spoints_all_.size(); idx+= step) {
     spoint_downsampled_.push_back(spoints_all_.at(idx));
   }
 }
+
 
 int SurfelAssociation::checkPlaneType(const Eigen::Vector3d& eigen_value,
                                       const Eigen::Matrix3d& eigen_vector,
@@ -196,7 +200,7 @@ int SurfelAssociation::checkPlaneType(const Eigen::Vector3d& eigen_value,
   Eigen::sort_vec(eigen_value, sorted_vec, ind);
 
   double p = 2*(sorted_vec[1] - sorted_vec[2]) /
-             (sorted_vec[2] + sorted_vec[1] + sorted_vec[0]);
+             (sorted_vec[2] + sorted_vec[1] + sorted_vec[0]); //equ.13
 
   if (p < p_lambda) {
     return -1;
@@ -237,6 +241,7 @@ bool SurfelAssociation::fitPlane(const VPointCloud::Ptr& cloud,
   pcl::copyPointCloud<VPoint> (*cloud, *inliers, *cloud_inliers);
   return true;
 }
+
 
 double SurfelAssociation::point2PlaneDistance(Eigen::Vector3d &pt,
                                               Eigen::Vector4d &plane_coeff) {

@@ -27,9 +27,8 @@ bool InertialInitializer::EstimateRotation(
         TrajectoryManager::Ptr traj_manager,
         const Eigen::aligned_vector<LiDAROdometry::OdomData>& odom_data) {
 
-  int flags = kontiki::trajectories::EvalOrientation;
-  std::shared_ptr<kontiki::trajectories::SplitTrajectory> p_traj
-          = traj_manager->getTrajectory();
+  int flags = kontiki::trajectories::EvalOrientation; //评估旋转
+  std::shared_ptr<kontiki::trajectories::SplitTrajectory> p_traj = traj_manager->getTrajectory();
 
   Eigen::aligned_vector<Eigen::Matrix4d> A_vec;
   for (size_t j = 1; j < odom_data.size(); ++j) {
@@ -43,7 +42,7 @@ bool InertialInitializer::EstimateRotation(
     Eigen::Quaterniond delta_qij_imu = result_i->orientation.conjugate()
                                        * result_j->orientation;
 
-    Eigen::Matrix3d R_Si_toS0 = odom_data.at(i).pose.topLeftCorner<3,3>();
+    Eigen::Matrix3d R_Si_toS0 = odom_data.at(i).pose.topLeftCorner<3,3>(); //ndt计算的对应时刻的laser的位姿
     Eigen::Matrix3d R_Sj_toS0 = odom_data.at(j).pose.topLeftCorner<3,3>();
     Eigen::Matrix3d delta_ij_sensor = R_Si_toS0.transpose() * R_Sj_toS0;
     Eigen::Quaterniond delta_qij_sensor(delta_ij_sensor);
@@ -51,12 +50,13 @@ bool InertialInitializer::EstimateRotation(
     Eigen::AngleAxisd R_vector1(delta_qij_sensor.toRotationMatrix());
     Eigen::AngleAxisd R_vector2(delta_qij_imu.toRotationMatrix());
     double delta_angle = 180 / M_PI * std::fabs(R_vector1.angle() - R_vector2.angle());
-    double huber = delta_angle > 1.0 ? 1.0/delta_angle : 1.0;
+    double huber = delta_angle > 1.0 ? 1.0/delta_angle : 1.0; //TODO：作者没有根据equ.12来赋权重
 
     Eigen::Matrix4d lq_mat = mathutils::LeftQuatMatrix(delta_qij_sensor);
     Eigen::Matrix4d rq_mat = mathutils::RightQuatMatrix(delta_qij_imu);
-    A_vec.push_back(huber * (lq_mat - rq_mat));
+    A_vec.push_back(huber * (lq_mat - rq_mat)); //equ.10的共轭形式，计算的是laser--->imu
   }
+
   size_t valid_size = A_vec.size();
   if (valid_size < 15) {
     return false;

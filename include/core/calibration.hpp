@@ -58,7 +58,7 @@ public:
     global_opt_lidar_weight = 1.0 / std::pow(lidar_noise, 2);   // 2.5e3
 
     // fine-tuned parameter
-    global_opt_gyro_weight = 28.0;
+    global_opt_gyro_weight = 28.0; //voerwrite the above paprams?
     global_opt_acce_weight = 18.5;
     global_opt_lidar_weight = 10.0;
   }
@@ -122,9 +122,9 @@ public:
   }
 
 public:
-  Eigen::Vector3d p_LinI;
+  Eigen::Vector3d p_LinI; //laser在imu下的坐标
 
-  Eigen::Quaterniond q_LtoI;
+  Eigen::Quaterniond q_LtoI; //计算的是imu--->laser
 
   Eigen::Vector3d gravity;
 

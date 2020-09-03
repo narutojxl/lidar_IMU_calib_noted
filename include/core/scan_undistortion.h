@@ -31,18 +31,20 @@ public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   typedef std::shared_ptr<ScanUndistortion> Ptr;
 
-  explicit ScanUndistortion(TrajectoryManager::Ptr traj_manager,
+  explicit ScanUndistortion(TrajectoryManager::Ptr traj_manager, //traj_manager指向实参指向的地址
                             std::shared_ptr<IO::LioDataset> dataset)
-                            : traj_manager_(std::move(traj_manager)),
-                              dataset_reader_(std::move(dataset)) {
+                            : traj_manager_(std::move(traj_manager)), //traj_manager的指向变为nullptr，traj_manager_指向实参指向的地址
+                              dataset_reader_(std::move(dataset)) {//同上
+                        //也就是说this->traj_manager_和CalibrHelper::traj_manager_指向相同
+                        //this->dataset_reader_也是一样，和CalibrHelper::dataset_reader_指向相同
   }
+
 
   void undistortScan(bool correct_position = false) {
     scan_data_.clear();
-
     for (const TPointCloud& scan_raw: dataset_reader_->get_scan_data()) {
-      Eigen::Quaterniond q_L0_to_G;
-      Eigen::Vector3d p_L0_in_G;
+      Eigen::Quaterniond q_L0_to_G;//jxl: q_I0_Lk
+      Eigen::Vector3d p_L0_in_G; //jxl: p_I0_Lk
       double scan_timestamp = pcl_conversions::fromPCL(scan_raw.header.stamp).toSec();
       if (!traj_manager_->evaluateLidarPose(scan_timestamp, q_L0_to_G, p_L0_in_G)) {
         std::cout << "[ScanUndistortion] : pass " << scan_timestamp << std::endl;
@@ -51,10 +53,12 @@ public:
 
       VPointCloud::Ptr scan_in_target(new VPointCloud);
       undistort(q_L0_to_G.conjugate(), p_L0_in_G, scan_raw,
-                scan_in_target, correct_position);
-      scan_data_.insert({scan_in_target->header.stamp, scan_in_target});
+                scan_in_target, correct_position); //把每帧laser下的points，去旋转畸变，转换到本帧laser时间戳时的laser frame下
+
+      scan_data_.insert({scan_in_target->header.stamp, scan_in_target}); //保存到scan_data_中
     }
   }
+
 
   void undistortScanInMap(bool correct_position = true) {
     scan_data_in_map_.clear();
@@ -104,9 +108,10 @@ public:
 
 private:
 
-  void undistort(const Eigen::Quaterniond& q_G_to_target,
-                 const Eigen::Vector3d& p_target_in_G,
-                 const TPointCloud& scan_raw,
+  
+  void undistort(const Eigen::Quaterniond& q_G_to_target, //q_Lk_I0
+                 const Eigen::Vector3d& p_target_in_G, //p_I0_Lk
+                 const TPointCloud& scan_raw, //Lk's points
                  const VPointCloud::Ptr& scan_in_target,
                  bool correct_position = false) const {
     scan_in_target->header = scan_raw.header;
@@ -125,19 +130,19 @@ private:
           scan_in_target->at(w,h) = vpoint;
           continue;
         }
-        double point_timestamp = scan_raw.at(w,h).timestamp;
-        Eigen::Quaterniond q_Lk_to_G;
-        Eigen::Vector3d p_Lk_in_G;
+        double point_timestamp = scan_raw.at(w,h).timestamp; //每个点的时间戳
+        Eigen::Quaterniond q_Lk_to_G; //q_I0_(Lk's points)
+        Eigen::Vector3d p_Lk_in_G; //P_I0_(Lk's points)
         if (!traj_manager_->evaluateLidarPose(point_timestamp, q_Lk_to_G, p_Lk_in_G)) {
           continue;
         }
-        Eigen::Quaterniond q_LktoL0 = q_G_to_target * q_Lk_to_G;
-        Eigen::Vector3d p_Lk(scan_raw.at(w,h).x, scan_raw.at(w,h).y, scan_raw.at(w,h).z);
+        Eigen::Quaterniond q_LktoL0 = q_G_to_target * q_Lk_to_G; //q_Lk_(Lk's points): laser时间戳时的laser frame--->该point时间戳时的laser frame
+        Eigen::Vector3d p_Lk(scan_raw.at(w,h).x, scan_raw.at(w,h).y, scan_raw.at(w,h).z); //每个点的坐标是在该point时间戳时的laser frame下
 
         Eigen::Vector3d point_out;
         if (!correct_position) {
-          point_out = q_LktoL0 * p_Lk;
-        } else {
+          point_out = q_LktoL0 * p_Lk; //去旋转畸变，转换到laser时间戳时的laser frame
+        } else {//去旋转和平移畸变，转换到laser时间戳时的laser frame
           point_out = q_LktoL0 * p_Lk + q_G_to_target * (p_Lk_in_G - p_target_in_G);
         }
 
@@ -150,12 +155,13 @@ private:
     }
   }
 
+
   TrajectoryManager::Ptr traj_manager_;
   std::shared_ptr<IO::LioDataset> dataset_reader_;
 
-  std::map<pcl::uint64_t, VPointCloud::Ptr> scan_data_;
-  std::map<pcl::uint64_t, VPointCloud::Ptr> scan_data_in_map_;
-  VPointCloud::Ptr map_cloud_;
+  std::map<pcl::uint64_t, VPointCloud::Ptr> scan_data_; //每帧scan时间戳，去畸变后的scan在各帧laser frame下
+  std::map<pcl::uint64_t, VPointCloud::Ptr> scan_data_in_map_;//每帧scan时间戳，去畸变后的scan转换到map下(L0下)
+  VPointCloud::Ptr map_cloud_; //scan_data_in_map_累加起来
 };
 
 }

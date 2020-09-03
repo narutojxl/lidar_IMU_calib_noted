@@ -30,10 +30,11 @@ struct TranslationVector {
   Eigen::Vector3d trans = Eigen::Vector3d(0,0,0);
 };
 
+
 class CalibInterface : public CalibrHelper {
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-  CalibInterface(ros::NodeHandle& nh);
+  CalibInterface(ros::NodeHandle& nh); 
 
   void initGui();
 

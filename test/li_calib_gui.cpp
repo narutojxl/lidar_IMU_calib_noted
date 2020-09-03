@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
     ros::init(argc, argv, "li_calib_gui");
     ros::NodeHandle n("~");
 
-    CalibInterface calib_app(n);
+    CalibInterface calib_app(n); //调用流程在构造函数中
 
     calib_app.renderingLoop();
     return 0;

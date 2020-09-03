@@ -24,7 +24,7 @@
 #include <utils/vlp_common.h>
 #include <utils/eigen_utils.hpp>
 #include <utils/pcl_utils.h>
-#include <pclomp/ndt_omp.h>
+#include <pclomp/ndt_omp.h> //ndt_omp package
 
 namespace licalib {
 
@@ -99,7 +99,8 @@ private:
   pclomp::NormalDistributionsTransform<VPoint, VPoint>::Ptr ndt_omp_;
 
   std::vector<size_t> key_frame_index_;
-  Eigen::aligned_vector<OdomData> odom_data_;
+  
+  Eigen::aligned_vector<OdomData> odom_data_; //每一帧在map下的位姿(第一帧坐标系为map的原点)
 };
 
 

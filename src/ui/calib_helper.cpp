@@ -71,25 +71,29 @@ CalibrHelper::CalibrHelper(ros::NodeHandle& nh)
     lio_dataset_temp.read(bag_path_, topic_imu_, topic_lidar, bag_start, bag_durr);
     dataset_reader_ = lio_dataset_temp.get_data();
     dataset_reader_->adjustDataset();
+
   }
 
   map_time_ = dataset_reader_->get_start_time();
   scan4map_time_ = map_time_ + scan4map;
   double end_time = dataset_reader_->get_end_time();
 
-  traj_manager_ = std::make_shared<TrajectoryManager>(
+  //创建这5个对象
+  traj_manager_ = std::make_shared<TrajectoryManager>( //Continuous-Time trajectory representation Toolkit
           map_time_, end_time, knot_distance, time_offset_padding);
 
   scan_undistortion_ = std::make_shared<ScanUndistortion>(
-          traj_manager_, dataset_reader_);
+          traj_manager_, dataset_reader_); //traj_manager_, dataset_reader_传进了scan_undistortion_对象里
 
   lidar_odom_ = std::make_shared<LiDAROdometry>(ndt_resolution_);
 
   rotation_initializer_ = std::make_shared<InertialInitializer>();
 
   surfel_association_ = std::make_shared<SurfelAssociation>(
-          associated_radius_, plane_lambda_);
+          associated_radius_, plane_lambda_); //TODO: 参数程序中写死了
 }
+
+
 
 bool CalibrHelper::createCacheFolder(const std::string& bag_path) {
   boost::filesystem::path p(bag_path);
@@ -101,41 +105,49 @@ bool CalibrHelper::createCacheFolder(const std::string& bag_path) {
   return true;
 }
 
+
 void CalibrHelper::Initialization() {
   if (Start != calib_step_) {
     ROS_WARN("[Initialization] Need status: Start.");
     return;
   }
   for (const auto& imu_data: dataset_reader_->get_imu_data()) {
-    traj_manager_->feedIMUData(imu_data);
+    traj_manager_->feedIMUData(imu_data); //把bag包中所有的imu信息(角速度和加速度)依次压入到traj_manager_中
   }
   traj_manager_->initialSO3TrajWithGyro();
+
 
   for(const TPointCloud& raw_scan: dataset_reader_->get_scan_data()) {
     VPointCloud::Ptr cloud(new VPointCloud);
     TPointCloud2VPointCloud(raw_scan.makeShared(), cloud);
     double scan_timestamp = pcl_conversions::fromPCL(raw_scan.header.stamp).toSec();
 
-    lidar_odom_->feedScan(scan_timestamp, cloud);
+    lidar_odom_->feedScan(scan_timestamp, cloud);  //map[first scan, curr scan)不断地累积起来
+                                                   //计算map和curr scan的ndt匹配
 
     if (lidar_odom_->get_odom_data().size() < 30
         || (lidar_odom_->get_odom_data().size() % 10 != 0))
       continue;
+
+    //scan数量大于30时：每隔10帧数据调用一次, 如果初始化成功退出for
     if (rotation_initializer_->EstimateRotation(traj_manager_,
-                                                lidar_odom_->get_odom_data())) {
+                                                lidar_odom_->get_odom_data())) {//计算的是laser--->imu(transform imu's point into laser)
       Eigen::Quaterniond qItoLidar = rotation_initializer_->getQ_ItoS();
       traj_manager_->getCalibParamManager()->set_q_LtoI(qItoLidar.conjugate());
 
-      Eigen::Vector3d euler_ItoL = qItoLidar.toRotationMatrix().eulerAngles(0,1,2);
+      Eigen::Vector3d euler_ItoL = qItoLidar.toRotationMatrix().eulerAngles(0,1,2); //作者这打印的不是欧拉角，欧拉角应该(3,2,1)分别对应yaw, pitch, roll
       std::cout << "[Initialization] Done. Euler_ItoL initial degree: "
                 << (euler_ItoL*180.0/M_PI).transpose() << std::endl;
       calib_step_ = InitializationDone;
       break;
     }
   }
+
   if (calib_step_ != InitializationDone)
     ROS_WARN("[Initialization] fails.");
 }
+
+
 
 void CalibrHelper::DataAssociation() {
   std::cout << "[Association] start ...." << std::endl;
@@ -143,11 +155,14 @@ void CalibrHelper::DataAssociation() {
   timer.tic();
 
   /// set surfel pap
-  if (InitializationDone == calib_step_ ) {
-    Mapping();
-    scan_undistortion_->undistortScanInMap(lidar_odom_->get_odom_data());
+  if (InitializationDone == calib_step_ ) {//刚初始化成功
 
-    surfel_association_->setSurfelMap(lidar_odom_->getNDTPtr(), map_time_);
+    Mapping(); //用去畸变的每一帧scan， ndt匹配得到每一帧的位姿(lidar_odom_->odom_data_)和不断构建map(lidar_odom_->map_cloud_)
+
+    scan_undistortion_->undistortScanInMap(lidar_odom_->get_odom_data()); //把每帧scan转换到map下
+
+    surfel_association_->setSurfelMap(lidar_odom_->getNDTPtr(), map_time_); //ndt_omp的target点云是整个map
+
   } else if (BatchOptimizationDone == calib_step_ || RefineDone == calib_step_) {
     scan_undistortion_->undistortScanInMap();
 
@@ -160,6 +175,7 @@ void CalibrHelper::DataAssociation() {
       ROS_WARN("[DataAssociation] Please follow the step.");
       return;
   }
+
 
   /// get association
   for (auto const &scan_raw : dataset_reader_->get_scan_data()) {
@@ -182,6 +198,8 @@ void CalibrHelper::DataAssociation() {
   }
 }
 
+
+
 void CalibrHelper::BatchOptimization() {
   if (DataAssociationDone != calib_step_) {
     ROS_WARN("[BatchOptimization] Need status: DataAssociationDone.");
@@ -197,6 +215,7 @@ void CalibrHelper::BatchOptimization() {
   saveCalibResult(cache_path_ + "/calib_result.csv");
   std::cout<<GREEN<<"[BatchOptimization] "<<timer.toc()<<" ms"<<RESET<<std::endl;
 }
+
 
 void CalibrHelper::Refinement() {
   if (BatchOptimizationDone > calib_step_) {
@@ -221,29 +240,33 @@ void CalibrHelper::Refinement() {
   std::cout<<GREEN<<"[Refinement] "<<timer.toc()<<" ms"<<RESET<<std::endl;
 }
 
-void CalibrHelper::Mapping(bool relocalization) {
+
+void CalibrHelper::Mapping(bool relocalization) {//default: false
   bool update_map = true;
   if (relocalization) {
     lidar_odom_->clearOdomData();
     update_map = false;
   } else {
-    scan_undistortion_->undistortScan();
-    lidar_odom_ = std::make_shared<LiDAROdometry>(ndt_resolution_);
+    scan_undistortion_->undistortScan(); //把每帧laser下的points，去旋转畸变，转换到每帧laser时间戳时的laser frame下，然后保存到scan_undistortion_->scan_data_中
+    lidar_odom_ = std::make_shared<LiDAROdometry>(ndt_resolution_); //让lidar_odom_重新指向新的对象,里面的内容为空。
   }
-
+  
+  //用去畸变的每一帧scan， ndt匹配得到每一帧的位姿和不断构建map(lidar_odom_->map_cloud_)
   double last_scan_t = 0;
   for (const auto& scan_raw: dataset_reader_->get_scan_data()) {
     double scan_t = pcl_conversions::fromPCL(scan_raw.header.stamp).toSec();
-    if (scan_t > scan4map_time_)
+    if (scan_t > scan4map_time_)//从第一帧laser算起，用scan4map秒内的scans来构建map
       update_map = false;
+
     auto iter = scan_undistortion_->get_scan_data().find(scan_raw.header.stamp);
     if (iter != scan_undistortion_->get_scan_data().end()) {
       Eigen::Matrix4d pose_predict = Eigen::Matrix4d::Identity();
       Eigen::Quaterniond q_L2toL1 = Eigen::Quaterniond::Identity();
       if (last_scan_t > 0 &&
-          traj_manager_->evaluateLidarRelativeRotation(last_scan_t, scan_t, q_L2toL1)) {
+          traj_manager_->evaluateLidarRelativeRotation(last_scan_t, scan_t, q_L2toL1)) {//由imu旋转B样条曲线和外参得到last frame---> curr frame旋转
         pose_predict.block<3,3>(0,0) = q_L2toL1.toRotationMatrix();
       }
+
       lidar_odom_->feedScan(scan_t, iter->second, pose_predict, update_map);
       last_scan_t = scan_t;
     }

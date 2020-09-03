@@ -32,7 +32,7 @@ std::istream& operator >> (std::istream& in, TranslationVector& t) {
 }
 
 CalibInterface::CalibInterface(ros::NodeHandle& nh) :
-        CalibrHelper(nh),
+        CalibrHelper(nh), //先调用CalibrHelper构造函数
         show_surfel_map_("ui.show_surfel_map", true, false, true),
         show_all_association_points_("ui.show_all_associated_points", false, false, true),
         optimize_time_offset_("ui.optimize_time_offset", false, false, true),
@@ -53,14 +53,14 @@ CalibInterface::CalibInterface(ros::NodeHandle& nh) :
     for (int i = 0; i < 200; i++) {
       pangolin_colors_.emplace_back(cw.GetUniqueColour());
     }
-  } else {
-    Initialization();
+  } else { //都是基类CalibrHelper的函数
+    Initialization();//计算imu到laser旋转，initial guess
 
     DataAssociation();
 
     BatchOptimization();
 
-    for (size_t iter = 0; iter < 7; iter++)
+    for (size_t iter = 0; iter < 15; iter++) //default: 7
       Refinement();
 
     opt_time_offset_ = true;

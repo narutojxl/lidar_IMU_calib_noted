@@ -54,6 +54,8 @@ inline void downsampleCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr in_cloud,
 
 };
 
+
+
 POINT_CLOUD_REGISTER_POINT_STRUCT(licalib::PointXYZIT,
                                   (float, x, x)
                                   (float, y, y)

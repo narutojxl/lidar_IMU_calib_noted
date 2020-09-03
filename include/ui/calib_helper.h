@@ -92,9 +92,13 @@ protected:
   double plane_lambda_;
 
   std::shared_ptr<IO::LioDataset> dataset_reader_;
+  
   InertialInitializer::Ptr rotation_initializer_;
+
   TrajectoryManager::Ptr traj_manager_;
+
   LiDAROdometry::Ptr lidar_odom_;
+
   SurfelAssociation::Ptr surfel_association_;
 
   ScanUndistortion::Ptr scan_undistortion_;

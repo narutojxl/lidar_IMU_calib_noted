@@ -31,7 +31,7 @@ using namespace kontiki::trajectories;
 void TrajectoryManager::initialTrajTo(double max_time) {
   Eigen::Quaterniond q0 = Eigen::Quaterniond::Identity();
   Eigen::Vector3d p0(0,0,0);
-  traj_->R3Spline()->ExtendTo (max_time, p0);
+  traj_->R3Spline()->ExtendTo(max_time, p0);
   traj_->SO3Spline()->ExtendTo(max_time, q0);
 }
 
@@ -43,22 +43,25 @@ void TrajectoryManager::initialSO3TrajWithGyro() {
   assert(imu_data_.size() > 0 &&
          "[initialSO3TrajWithGyro]: There's NO imu data for initialization.");
   std::shared_ptr<SO3TrajEstimator> estimator_SO3;
-  estimator_SO3 = std::make_shared<SO3TrajEstimator>(traj_->SO3Spline());
+  estimator_SO3 = std::make_shared<SO3TrajEstimator>(traj_->SO3Spline()); //imu旋转样条曲线对象
 
-  addGyroscopeMeasurements(estimator_SO3);
+  addGyroscopeMeasurements(estimator_SO3); //把所有imu gyro保存到gyro_list_中
+                                          //把所有imu gyro添加到traj_的imu旋转样条曲线
 
   /// fix the initial pose of trajectory
   double weight_t0 = calib_param_manager->global_opt_gyro_weight;
   double t0 = traj_->SO3Spline()->MinTime();
   //Eigen::Quaterniond q0 = Eigen::Quaterniond::Identity();
-  Eigen::AngleAxisd rotation_vector(0.0001, Eigen::Vector3d(0,0,1));
-  Eigen::Quaterniond q0 = Eigen::Quaterniond (rotation_vector.matrix());
-  auto m_q0 = std::make_shared<OrientationMeasurement>(t0, q0, weight_t0);
-  estimator_SO3->AddMeasurement<OrientationMeasurement>(m_q0);
 
-  ceres::Solver::Summary summary = estimator_SO3->Solve(30, false);
+  Eigen::AngleAxisd rotation_vector(0.0001, Eigen::Vector3d(0,0,1));
+  Eigen::Quaterniond q0 = Eigen::Quaterniond(rotation_vector.matrix());
+  auto m_q0 = std::make_shared<OrientationMeasurement>(t0, q0, weight_t0);
+  estimator_SO3->AddMeasurement<OrientationMeasurement>(m_q0); //给imu旋转样条曲线添加原点处的旋转 I
+
+  ceres::Solver::Summary summary = estimator_SO3->Solve(50, false); //default: 30
   std::cout << summary.BriefReport() << std::endl;
 }
+
 
 void TrajectoryManager::trajInitFromSurfel(
         SurfelAssociation::Ptr surfels_association,
@@ -109,36 +112,40 @@ bool TrajectoryManager::evaluateIMUPose(double imu_time, int flags,
   return true;
 }
 
+
 bool TrajectoryManager::evaluateLidarPose(double lidar_time,
                                           Eigen::Quaterniond &q_LtoG,
                                           Eigen::Vector3d &p_LinG) const {
   double traj_time = lidar_time + lidar_->time_offset();
   if (traj_->MinTime() > traj_time || traj_->MaxTime() <= traj_time)
     return false;
-  Result result = traj_->Evaluate( traj_time, EvalOrientation | EvalPosition);
-  q_LtoG = result->orientation * calib_param_manager->q_LtoI;
-  p_LinG = result->orientation * calib_param_manager->p_LinI + result->position;
+  Result result = traj_->Evaluate(traj_time, EvalOrientation | EvalPosition); //imu的旋转，平移B样条曲线
+
+  q_LtoG = result->orientation * calib_param_manager->q_LtoI; //jxl: q_I0_Lk = q_I0_Ik * q_Ik_Lk， 这里的G是I0(第一帧imu坐标系)
+  p_LinG = result->orientation * calib_param_manager->p_LinI + result->position;//p_I0_Lk
   return true;
 }
+
 
 bool TrajectoryManager::evaluateLidarRelativeRotation(double lidar_time1,
         double lidar_time2, Eigen::Quaterniond &q_L2toL1) const {
   assert(lidar_time1 <= lidar_time2
          && "[evaluateRelativeRotation] : lidar_time1 > lidar_time2");
 
-  double traj_time1 = lidar_time1 + lidar_->time_offset();
+  double traj_time1 = lidar_time1 + lidar_->time_offset(); //laser和imu的时间差
   double traj_time2 = lidar_time2 + lidar_->time_offset();
 
   if (traj_->MinTime() > traj_time1 || traj_->MaxTime() <= traj_time2)
     return false;
 
-  Result result1 = traj_->Evaluate(traj_time1, EvalOrientation);
+  Result result1 = traj_->Evaluate(traj_time1, EvalOrientation);//imu旋转B样条曲线
   Result result2 = traj_->Evaluate(traj_time2, EvalOrientation);
   Eigen::Quaterniond q_I2toI1 = result1->orientation.conjugate()*result2->orientation;
 
   q_L2toL1 = calib_param_manager->q_LtoI.conjugate() * q_I2toI1 * calib_param_manager->q_LtoI;
   return true;
 }
+
 
 template <typename TrajectoryModel>
 void TrajectoryManager::addGyroscopeMeasurements(
@@ -148,16 +155,17 @@ void TrajectoryManager::addGyroscopeMeasurements(
   double weight = calib_param_manager->global_opt_gyro_weight;
   const double min_time = estimator->trajectory()->MinTime();
   const double max_time = estimator->trajectory()->MaxTime();
-
+  
   for (const auto &v : imu_data_) {
     if ( min_time > v.timestamp || max_time <= v.timestamp) {
       continue;
     }
-    auto mg = std::make_shared<GyroMeasurement>(imu_, v.timestamp, v.gyro, weight);
+    auto mg = std::make_shared<GyroMeasurement>(imu_, v.timestamp, v.gyro, weight); //imu时间戳，以及对应的gyro
     gyro_list_.push_back(mg);
     estimator->template AddMeasurement<GyroMeasurement>(mg);
   }
 }
+
 
 template <typename TrajectoryModel>
 void TrajectoryManager::addAccelerometerMeasurement(
