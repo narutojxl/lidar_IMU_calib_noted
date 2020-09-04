@@ -89,7 +89,7 @@ void LiDAROdometry::updateKeyScan(const VPointCloud::Ptr& cur_scan,
     pcl::transformPointCloud(*filtered_cloud, *scan_in_target, odom_data.pose); //把当前帧转化到map下
 
     *map_cloud_ += *scan_in_target;
-    ndt_omp_->setInputTarget(map_cloud_); //TODO: ndt_omp的target点云是整个map
+    ndt_omp_->setInputTarget(map_cloud_); //注意：ndt_omp的target点云是整个map
     key_frame_index_.push_back(odom_data_.size()); //关键帧的index从1开始
   }
 }

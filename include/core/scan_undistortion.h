@@ -63,19 +63,23 @@ public:
   void undistortScanInMap(bool correct_position = true) {
     scan_data_in_map_.clear();
     map_cloud_ = VPointCloud::Ptr(new VPointCloud);
-    Eigen::Quaterniond q_L0_to_G;
-    Eigen::Vector3d p_L0_in_G;
+    Eigen::Quaterniond q_L0_to_G; //jxl: q_I0_L0, G: I0
+    Eigen::Vector3d p_L0_in_G; //jxl: p_I0_L0
     double map_start_time = traj_manager_->get_map_time();
-    traj_manager_->evaluateLidarPose(map_start_time, q_L0_to_G, p_L0_in_G);
+    traj_manager_->evaluateLidarPose(map_start_time, q_L0_to_G, p_L0_in_G); 
 
     for (const TPointCloud& scan_raw: dataset_reader_->get_scan_data()) {
       VPointCloud::Ptr scan_in_target(new VPointCloud);
-      undistort(q_L0_to_G.conjugate(), p_L0_in_G, scan_raw,
-                scan_in_target, correct_position);
+      undistort(q_L0_to_G.conjugate(), //q_L0_I0
+                p_L0_in_G, //p_I0_L0
+                scan_raw,
+                scan_in_target, correct_position); //scan_in_target: 转换到L0下，即map下的points
+
       scan_data_in_map_.insert({scan_in_target->header.stamp, scan_in_target});
       *map_cloud_ += *scan_in_target;
     }
   }
+
 
   void undistortScanInMap(const Eigen::aligned_vector<LiDAROdometry::OdomData>& odom_data) {
     scan_data_in_map_.clear();
@@ -159,8 +163,8 @@ private:
   TrajectoryManager::Ptr traj_manager_;
   std::shared_ptr<IO::LioDataset> dataset_reader_;
 
-  std::map<pcl::uint64_t, VPointCloud::Ptr> scan_data_; //每帧scan时间戳，去畸变后的scan在各帧laser frame下
-  std::map<pcl::uint64_t, VPointCloud::Ptr> scan_data_in_map_;//每帧scan时间戳，去畸变后的scan转换到map下(L0下)
+  std::map<pcl::uint64_t, VPointCloud::Ptr> scan_data_; //<每帧scan时间戳，去畸变后的scan在各帧laser frame下>
+  std::map<pcl::uint64_t, VPointCloud::Ptr> scan_data_in_map_;//<每帧scan时间戳，去畸变后的scan转换到map下(L0下)>
   VPointCloud::Ptr map_cloud_; //scan_data_in_map_累加起来
 };
 

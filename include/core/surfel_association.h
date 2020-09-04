@@ -35,18 +35,18 @@ public:
 
   struct SurfelPoint {
     double timestamp;
-    Eigen::Vector3d point;  // raw data
-    Eigen::Vector3d point_in_map;
-    size_t plane_id;
+    Eigen::Vector3d point;  //raw data，  //未去畸变的scan，在各自laser下
+    Eigen::Vector3d point_in_map; //去了畸变的scan,在map下
+    size_t plane_id; //点关联对应的plane id
   };
 
   struct SurfelPlane {
-    Eigen::Vector4d p4;
-    Eigen::Vector3d Pi; // Closest Point Paramization
-    Eigen::Vector3d boxMin;
-    Eigen::Vector3d boxMax;
-    VPointCloud cloud;
-    VPointCloud cloud_inlier;
+    Eigen::Vector4d p4; //平面 π=[n^T, d]^T
+    Eigen::Vector3d Pi; // Closest Point Paramization  //-d * n
+    Eigen::Vector3d boxMin; //体素的min.x, min.y, min.z
+    Eigen::Vector3d boxMax; //体素的max.x, max.y, max.z
+    VPointCloud cloud; //体素中的所有points
+    VPointCloud cloud_inlier; //体素中拟合平面的inlier points
   };
 
 
@@ -123,14 +123,14 @@ private:
   double p_lambda_;
   double map_timestamp_;
 
-  Eigen::aligned_vector<SurfelPlane> surfel_planes_;
-  colorPointCloudT surfels_map_;
+  Eigen::aligned_vector<SurfelPlane> surfel_planes_; //整个map点云中所有的plane voxels
+  colorPointCloudT surfels_map_; //整个map点云中所有plane voxels的inliers点(每个点涂上了颜色)
 
   // associated results
-  Eigen::aligned_vector<Eigen::aligned_vector<SurfelPoint>> spoint_per_surfel_;
-  Eigen::aligned_vector<SurfelPoint> spoints_all_;
+  Eigen::aligned_vector<Eigen::aligned_vector<SurfelPoint>> spoint_per_surfel_; //依次存放plane_id = 0, =1, =2...关联的points
+  Eigen::aligned_vector<SurfelPoint> spoints_all_; //map中能和一个平面有着对应关系(距离小于阈值)的所有points，按时间顺序存储的
 
-  Eigen::aligned_vector<SurfelPoint> spoint_downsampled_;
+  Eigen::aligned_vector<SurfelPoint> spoint_downsampled_; //spoints_all_的降采样
 };
 
 }

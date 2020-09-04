@@ -53,10 +53,10 @@ CalibInterface::CalibInterface(ros::NodeHandle& nh) :
     for (int i = 0; i < 200; i++) {
       pangolin_colors_.emplace_back(cw.GetUniqueColour());
     }
-  } else { //都是基类CalibrHelper的函数
+  } else { //都是基类CalibrHelper的函数  //TODO: 作者大多数的实现都是调用Kontiki库和自己在Kontiki上开发的，实现的细节都封装起来了。可见作者对Kontiki库非常熟悉！
     Initialization();//计算imu到laser旋转，initial guess
 
-    DataAssociation();
+    DataAssociation(); //计算map中的每个点与map中的哪个plane id相对应(点到平面的距离小于阈值)
 
     BatchOptimization();
 
@@ -116,6 +116,7 @@ void CalibInterface::initGui() {
 }
 
 
+//called by li_calib_gui.cpp
 void CalibInterface::renderingLoop() {
   while (!pangolin::ShouldQuit() && ros::ok()) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

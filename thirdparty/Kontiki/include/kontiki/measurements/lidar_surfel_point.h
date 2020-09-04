@@ -27,6 +27,7 @@ class LiDARSurfelPoint {
       : LiDARSurfelPoint(lidar, lidar_point, plane, timestamp, map_time, 5.) {}
 
 
+
   template<typename TrajectoryModel, typename T>
   Eigen::Matrix<T, 1, 1> reprojectPoint2map(const type::Trajectory<TrajectoryModel, T>& trajectory,
                                             const type::LiDAR<LiDARModel, T>& lidar,
@@ -69,6 +70,7 @@ class LiDARSurfelPoint {
 
     return error;
   }
+
 
   template<typename TrajectoryModel, typename T>
   Eigen::Matrix<T, 1, 1> Error(const type::Trajectory<TrajectoryModel, T> &trajectory,
@@ -132,6 +134,7 @@ class LiDARSurfelPoint {
     typename TrajectoryModel::Meta trajectory_meta;
     typename LiDARModel::Meta lidar_meta;
   }; // Residual;
+
 
   template<typename TrajectoryModel>
   void AddToEstimator(kontiki::TrajectoryEstimator<TrajectoryModel>& estimator) {

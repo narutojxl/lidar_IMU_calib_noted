@@ -48,7 +48,7 @@ CalibrHelper::CalibrHelper(ros::NodeHandle& nh)
   nh.param<double>("bag_durr", bag_durr, -1);
   nh.param<double>("scan4map", scan4map, 15);
   nh.param<double>("ndtResolution", ndt_resolution_, 0.5);
-  nh.param<double>("time_offset_padding", time_offset_padding, 0.015);
+  nh.param<double>("time_offset_padding", time_offset_padding, 0.015); //imu和laser之间的时间offset
   nh.param<double>("knot_distance", knot_distance, 0.02);
 
   if (!createCacheFolder(bag_path_)) {
@@ -91,6 +91,7 @@ CalibrHelper::CalibrHelper(ros::NodeHandle& nh)
 
   surfel_association_ = std::make_shared<SurfelAssociation>(
           associated_radius_, plane_lambda_); //TODO: 参数程序中写死了
+          //点到体素内plane的距离thresh； valid plane的阈值
 }
 
 
@@ -135,7 +136,7 @@ void CalibrHelper::Initialization() {
       Eigen::Quaterniond qItoLidar = rotation_initializer_->getQ_ItoS();
       traj_manager_->getCalibParamManager()->set_q_LtoI(qItoLidar.conjugate());
 
-      Eigen::Vector3d euler_ItoL = qItoLidar.toRotationMatrix().eulerAngles(0,1,2); //作者这打印的不是欧拉角，欧拉角应该(3,2,1)分别对应yaw, pitch, roll
+      Eigen::Vector3d euler_ItoL = qItoLidar.toRotationMatrix().eulerAngles(0,1,2); //TODO：作者这打印的不是欧拉角，欧拉角应该(2,1,0)分别对应yaw, pitch, roll
       std::cout << "[Initialization] Done. Euler_ItoL initial degree: "
                 << (euler_ItoL*180.0/M_PI).transpose() << std::endl;
       calib_step_ = InitializationDone;
@@ -154,27 +155,35 @@ void CalibrHelper::DataAssociation() {
   TicToc timer;
   timer.tic();
 
+
   /// set surfel pap
   if (InitializationDone == calib_step_ ) {//刚初始化成功
 
     Mapping(); //用去畸变的每一帧scan， ndt匹配得到每一帧的位姿(lidar_odom_->odom_data_)和不断构建map(lidar_odom_->map_cloud_)
 
-    scan_undistortion_->undistortScanInMap(lidar_odom_->get_odom_data()); //把每帧scan转换到map下
+    scan_undistortion_->undistortScanInMap(lidar_odom_->get_odom_data()); //把每帧去了畸变的scan转换到map下
 
-    surfel_association_->setSurfelMap(lidar_odom_->getNDTPtr(), map_time_); //ndt_omp的target点云是整个map
+    surfel_association_->setSurfelMap(lidar_odom_->getNDTPtr(), map_time_); 
+    //注意： ndt_omp的target点云是整个map
+    //计算整个map点云中所有的plane voxels的参数
 
-  } else if (BatchOptimizationDone == calib_step_ || RefineDone == calib_step_) {
+  } else if (BatchOptimizationDone == calib_step_ || RefineDone == calib_step_) {//refine阶段
+
     scan_undistortion_->undistortScanInMap();
 
     plane_lambda_ = 0.7;
     surfel_association_->setPlaneLambda(plane_lambda_);
+
     auto ndt_omp = LiDAROdometry::ndtInit(ndt_resolution_);
     ndt_omp->setInputTarget(scan_undistortion_->get_map_cloud());
+
     surfel_association_->setSurfelMap(ndt_omp, map_time_);
+
   } else {
       ROS_WARN("[DataAssociation] Please follow the step.");
       return;
   }
+
 
 
   /// get association
@@ -184,9 +193,11 @@ void CalibrHelper::DataAssociation() {
     if (iter == scan_undistortion_->get_scan_data_in_map().end()) {
       continue;
     }
-    surfel_association_->getAssociation(iter->second, scan_raw.makeShared(), 2);
+    surfel_association_->getAssociation(iter->second, scan_raw.makeShared(), 2);  //对每一帧scan的point计算每个点与哪个plane id相关联
   }
+
   surfel_association_->averageTimeDownSmaple();
+
   std::cout << "Surfel point number: "
             << surfel_association_->get_surfel_points().size() << std::endl;
   std::cout<<GREEN<<"[Association] "<<timer.toc()<<" ms"<<RESET<<std::endl;
@@ -209,7 +220,7 @@ void CalibrHelper::BatchOptimization() {
 
   TicToc timer;
   timer.tic();
-  traj_manager_->trajInitFromSurfel(surfel_association_, opt_time_offset_);
+  traj_manager_->trajInitFromSurfel(surfel_association_, opt_time_offset_); 
 
   calib_step_ = BatchOptimizationDone;
   saveCalibResult(cache_path_ + "/calib_result.csv");
@@ -226,6 +237,7 @@ void CalibrHelper::Refinement() {
   std::cout << "\n================ Iteration " << iteration_step_ << " ==================\n";
 
   DataAssociation();
+
   if (DataAssociationDone != calib_step_) {
     ROS_WARN("[Refinement] Need status: DataAssociationDone.");
     return;
@@ -233,7 +245,7 @@ void CalibrHelper::Refinement() {
   TicToc timer;
   timer.tic();
 
-  traj_manager_->trajInitFromSurfel(surfel_association_, opt_time_offset_);
+  traj_manager_->trajInitFromSurfel(surfel_association_, opt_time_offset_);  //执行batch
   calib_step_ = RefineDone;
   saveCalibResult(cache_path_ + "/calib_result.csv");
 
@@ -281,12 +293,12 @@ void CalibrHelper::saveCalibResult(const std::string& calib_result_file) const {
     outfile << "bag_path" << ","
             << "imu_topic" << "," << "map_time" << "," << "iteration_step" << ","
             << "p_IinL.x" << "," << "p_IinL.y" << "," << "p_IinL.z" << ","
-            << "q_ItoL.x" << "," << "q_ItoL.y" << "," << "q_ItoL" << ","
+            << "q_ItoL.x" << "," << "q_ItoL.y" << "," << "q_ItoL.z" << ","
             << "q_ItoL.w" << ","
             << "time_offset" << ","
             << "gravity.x" << "," << "gravity.y" << "," << "gravity.z" << ","
             << "gyro_bias.x" << "," << "gyro_bias.y" << "," <<"gyro_bias.z" << ","
-            << "acce_bias.z" << "," << "acce_bias.y" << "," <<"acce_bias.z" << "\n";
+            << "acce_bias.x" << "," << "acce_bias.y" << "," <<"acce_bias.z" << "\n";
     outfile.close();
   }
 
@@ -304,6 +316,7 @@ void CalibrHelper::saveCalibResult(const std::string& calib_result_file) const {
 void CalibrHelper::saveMap() const {
   if (calib_step_ <= Start)
     return;
+    
   std::string NDT_target_map_path = cache_path_ + "/NDT_target_map.pcd";
   lidar_odom_->saveTargetMap(NDT_target_map_path);
 

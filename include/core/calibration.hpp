@@ -58,9 +58,9 @@ public:
     global_opt_lidar_weight = 1.0 / std::pow(lidar_noise, 2);   // 2.5e3
 
     // fine-tuned parameter
-    global_opt_gyro_weight = 28.0; //voerwrite the above paprams?
+    global_opt_gyro_weight = 28.0; //jxl: 覆盖了上面的参数？
     global_opt_acce_weight = 18.5;
-    global_opt_lidar_weight = 10.0;
+    global_opt_lidar_weight = 10.0; 
   }
 
   void set_q_LtoI(Eigen::Quaterniond q) {
@@ -88,12 +88,12 @@ public:
   }
 
   void showStates() const {
-    Eigen::Vector3d euler_LtoI = q_LtoI.toRotationMatrix().eulerAngles(0,1,2);
+    Eigen::Vector3d euler_LtoI = q_LtoI.toRotationMatrix().eulerAngles(0,1,2); //TODO：作者的欧拉角是0,1,2，不是2,1,0
     euler_LtoI = euler_LtoI * 180 / M_PI;
 
     Eigen::Quaterniond q_ItoL = q_LtoI.inverse();
     Eigen::Vector3d p_IinL = q_ItoL * (-p_LinI);
-    Eigen::Vector3d euler_ItoL = q_ItoL.toRotationMatrix().eulerAngles(0,1,2);
+    Eigen::Vector3d euler_ItoL = q_ItoL.toRotationMatrix().eulerAngles(0,1,2); //同上
     euler_ItoL = euler_ItoL * 180 / M_PI;
 
     std::cout << "P_LinI      : " << p_LinI.transpose() << std::endl;
@@ -126,16 +126,16 @@ public:
 
   Eigen::Quaterniond q_LtoI; //计算的是imu--->laser
 
-  Eigen::Vector3d gravity;
+  Eigen::Vector3d gravity; //重力在L0下的向量
 
-  double time_offset;
+  double time_offset; //laser和imu的时间offset
 
   Eigen::Vector3d gyro_bias;
 
   Eigen::Vector3d acce_bias;
 
   ///weight
-  double global_opt_gyro_weight;
+  double global_opt_gyro_weight; //initial, batch, refine阶段都会用到
 
   double global_opt_acce_weight;
 

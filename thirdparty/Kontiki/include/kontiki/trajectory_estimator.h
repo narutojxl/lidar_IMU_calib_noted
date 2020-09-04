@@ -35,6 +35,7 @@ class TrajectoryEstimator {
     return trajectory_;
   }
 
+
   ceres::Solver::Summary Solve(int max_iterations=50, bool progress=true, int num_threads=-1) {
     ceres::Solver::Options options;
 
@@ -66,6 +67,7 @@ class TrajectoryEstimator {
     ceres::Solve(options, &problem_, &summary);
     return summary;
   }
+
 
   template<typename MeasurementType>
   void AddMeasurement(std::shared_ptr<MeasurementType> m) {

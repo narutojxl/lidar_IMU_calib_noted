@@ -29,7 +29,9 @@
 #include <kontiki/trajectories/uniform_so3_spline_trajectory.h>
 #include <kontiki/measurements/gyroscope_measurement.h>
 #include <kontiki/measurements/accelerometer_measurement.h>
-#include <kontiki/measurements/lidar_surfel_point.h>
+
+#include <kontiki/measurements/lidar_surfel_point.h> //作者在开发的
+
 #include <kontiki/measurements/orientation_measurement.h>
 #include <kontiki/measurements/position_measurement.h>
 
@@ -43,7 +45,7 @@
 namespace licalib {
 class TrajectoryManager {
   using IMUSensor = kontiki::sensors::ConstantBiasImu;
-  using LiDARSensor = kontiki::sensors::VLP16LiDAR;
+  using LiDARSensor = kontiki::sensors::VLP16LiDAR; //作者在开发的
 
   using SO3TrajEstimator   = kontiki::TrajectoryEstimator<kontiki::trajectories::UniformSO3SplineTrajectory>;
   using R3TrajEstimator    = kontiki::TrajectoryEstimator<kontiki::trajectories::UniformR3SplineTrajectory>;
@@ -51,7 +53,7 @@ class TrajectoryManager {
 
   using GyroMeasurement    = kontiki::measurements::GyroscopeMeasurement<IMUSensor>;
   using AccelMeasurement   = kontiki::measurements::AccelerometerMeasurement<IMUSensor>;
-  using SurfMeasurement         = kontiki::measurements::LiDARSurfelPoint<LiDARSensor>;
+  using SurfMeasurement    = kontiki::measurements::LiDARSurfelPoint<LiDARSensor>; //作者在开发的
 
   using OrientationMeasurement  = kontiki::measurements::OrientationMeasurement;
   using PositionMeasurement     = kontiki::measurements::PositionMeasurement;

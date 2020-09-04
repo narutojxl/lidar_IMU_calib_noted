@@ -65,11 +65,12 @@ void TrajectoryManager::initialSO3TrajWithGyro() {
 
 void TrajectoryManager::trajInitFromSurfel(
         SurfelAssociation::Ptr surfels_association,
-        bool opt_time_offset_) {
+        bool opt_time_offset_) {//false  //是否优化imu和laser的time offset
   lidar_->set_relative_orientation(calib_param_manager->q_LtoI);
   lidar_->set_relative_position(calib_param_manager->p_LinI);
   lidar_->LockRelativeOrientation(false);
   lidar_->LockRelativePosition(false);
+
   if (opt_time_offset_ && time_offset_padding_ > 0) {
     lidar_->LockTimeOffset(false);
     lidar_->set_max_time_offset(time_offset_padding_);
@@ -78,7 +79,8 @@ void TrajectoryManager::trajInitFromSurfel(
     lidar_->LockTimeOffset(true);
   }
   imu_->LockGyroscopeBias(false);
-  imu_->LockAccelerometerBias(false);
+  imu_->LockAccelerometerBias(false); //估计外参，time offset, gyro bias, acc bias 
+
 
   std::shared_ptr<SplitTrajEstimator> estimator_split;
   estimator_split = std::make_shared<SplitTrajEstimator>(traj_);
@@ -91,7 +93,7 @@ void TrajectoryManager::trajInitFromSurfel(
   // addCallback(estimator_split);
 
   //printErrorStatistics("Before optimization");
-  ceres::Solver::Summary summary = estimator_split->Solve(30, false);
+  ceres::Solver::Summary summary = estimator_split->Solve(50, false); //default: 30次，调用SplitTrajEstimator类的接口
   std::cout << summary.BriefReport() << std::endl;
   printErrorStatistics("After optimization");
 
@@ -103,6 +105,7 @@ void TrajectoryManager::trajInitFromSurfel(
   calib_param_manager->set_acce_bias(imu_->accelerometer_bias());
   calib_param_manager->showStates();
 }
+
 
 bool TrajectoryManager::evaluateIMUPose(double imu_time, int flags,
                                         Result &result) const {
@@ -166,7 +169,6 @@ void TrajectoryManager::addGyroscopeMeasurements(
   }
 }
 
-
 template <typename TrajectoryModel>
 void TrajectoryManager::addAccelerometerMeasurement(
         std::shared_ptr<kontiki::TrajectoryEstimator<TrajectoryModel>> estimator) {
@@ -180,11 +182,12 @@ void TrajectoryManager::addAccelerometerMeasurement(
     if ( min_time > v.timestamp || max_time <= v.timestamp) {
       continue;
     }
-    auto ma = std::make_shared<AccelMeasurement>(imu_, v.timestamp, v.accel, weight);
+    auto ma = std::make_shared<AccelMeasurement>(imu_, v.timestamp, v.accel, weight); //imu时间戳，以及对应的acc
     accel_list_.push_back(ma);
     estimator->template AddMeasurement<AccelMeasurement>(ma);
   }
 }
+
 
 template <typename TrajectoryModel>
 void TrajectoryManager::addSurfMeasurement(
@@ -192,8 +195,8 @@ void TrajectoryManager::addSurfMeasurement(
         const SurfelAssociation::Ptr surfel_association) {
   const double weight = calib_param_manager->global_opt_lidar_weight;
   surfelpoint_list_.clear();
-  closest_point_vec_.clear();
-  for (auto const& v: surfel_association->get_surfel_planes()) {
+  closest_point_vec_.clear(); //依次存放plane id=0,=1,=2...的Pi点
+  for (auto const& v: surfel_association->get_surfel_planes()) {//依次遍历每个plane，plane id从0开始
     closest_point_vec_.push_back(v.Pi);
   }
 
@@ -203,11 +206,13 @@ void TrajectoryManager::addSurfMeasurement(
     size_t plane_id = spoint.plane_id;
 
     auto msp = std::make_shared<SurfMeasurement> (lidar_, spoint.point,
-                                                  closest_point_vec_.at(plane_id).data(), time, map_time_, 5.0, weight);
+                                                  closest_point_vec_.at(plane_id).data(), 
+                                                  time, map_time_, 5.0, weight); //TODO：作者开发的，残差什么的都是在SurfMeasurement类里开发的                                     
     surfelpoint_list_.push_back(msp);
     estimator->template AddMeasurement<SurfMeasurement>(msp);
   }
 }
+
 
 template <typename TrajectoryModel>
 void TrajectoryManager::addCallback(
