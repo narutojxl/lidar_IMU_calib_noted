@@ -58,7 +58,7 @@ public:
     global_opt_lidar_weight = 1.0 / std::pow(lidar_noise, 2);   // 2.5e3
 
     // fine-tuned parameter
-    global_opt_gyro_weight = 28.0; //jxl: 覆盖了上面的参数？
+    global_opt_gyro_weight = 28.0; //TODO: https://github.com/APRIL-ZJU/lidar_IMU_calib/issues/2
     global_opt_acce_weight = 18.5;
     global_opt_lidar_weight = 10.0; 
   }

@@ -69,7 +69,7 @@ public:
             map_time_(0),
             imu_(std::make_shared<IMUSensor>()),
             lidar_(std::make_shared<LiDARSensor>()),
-            calib_param_manager(std::make_shared<CalibParamManager>()) {//TODO: 在构造函数中需要设置自己imu的参数
+            calib_param_manager(std::make_shared<CalibParamManager>()) {//TODO: 在构造函数中需要根据自己imu的特性，来设置参数
     assert(knot_distance > 0 && "knot_distance should be lager than 0");
 
     double traj_start_time = start_time - time_offset_padding;

@@ -31,10 +31,10 @@ public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   typedef std::shared_ptr<ScanUndistortion> Ptr;
 
-  explicit ScanUndistortion(TrajectoryManager::Ptr traj_manager, //traj_manager指向实参指向的地址
-                            std::shared_ptr<IO::LioDataset> dataset)
+  explicit ScanUndistortion(TrajectoryManager::Ptr traj_manager,      //因为是值传递(调用的是copy ctor)，traj_manager指向实参指向的地址
+                            std::shared_ptr<IO::LioDataset> dataset)  //dataset也指向实参指向的地址
                             : traj_manager_(std::move(traj_manager)), //traj_manager的指向变为nullptr，traj_manager_指向实参指向的地址
-                              dataset_reader_(std::move(dataset)) {//同上
+                              dataset_reader_(std::move(dataset)) {   //同上
                         //也就是说this->traj_manager_和CalibrHelper::traj_manager_指向相同
                         //this->dataset_reader_也是一样，和CalibrHelper::dataset_reader_指向相同
   }
