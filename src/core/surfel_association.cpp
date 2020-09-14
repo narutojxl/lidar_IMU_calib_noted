@@ -119,7 +119,8 @@ void SurfelAssociation::getAssociation(const VPointCloud::Ptr& scan_inM, //去�
   for (unsigned int i = 0; i < width * height; i++) {
     associatedFlag[i] = -1; //每个点还没有对应的plane id
   }
-
+ 
+ 
 #pragma omp parallel for num_threads(omp_get_max_threads())
   for (int plane_id = 0; plane_id < surfel_planes_.size(); plane_id++) {//当前帧scan中所有的surfel_planes_
     std::vector<std::vector<int>> ring_masks;

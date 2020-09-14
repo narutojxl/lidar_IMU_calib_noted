@@ -54,7 +54,7 @@ public:
 
 private:
   bool rotaion_initialized_;
-  Eigen::Quaterniond q_ItoS_est_;
+  Eigen::Quaterniond q_ItoS_est_; //laser--->imu旋转
 
 };
 

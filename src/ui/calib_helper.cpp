@@ -90,7 +90,7 @@ CalibrHelper::CalibrHelper(ros::NodeHandle& nh)
   rotation_initializer_ = std::make_shared<InertialInitializer>();
 
   surfel_association_ = std::make_shared<SurfelAssociation>(
-          associated_radius_, plane_lambda_); //TODO: 参数程序中写死了
+          associated_radius_, plane_lambda_); //TODO: default=(0.05, 0.6)
           //点到体素内plane的距离thresh； valid plane的阈值
 }
 
@@ -127,7 +127,7 @@ void CalibrHelper::Initialization() {
                                                    //计算map和curr scan的ndt匹配
 
     if (lidar_odom_->get_odom_data().size() < 30
-        || (lidar_odom_->get_odom_data().size() % 10 != 0))
+        || (lidar_odom_->get_odom_data().size() % 10 != 0)) //TODO: default: 10
       continue;
 
     //scan数量大于30时：每隔10帧数据调用一次, 如果初始化成功退出for
@@ -136,11 +136,13 @@ void CalibrHelper::Initialization() {
       Eigen::Quaterniond qItoLidar = rotation_initializer_->getQ_ItoS();
       traj_manager_->getCalibParamManager()->set_q_LtoI(qItoLidar.conjugate());
 
-      Eigen::Vector3d euler_ItoL = qItoLidar.toRotationMatrix().eulerAngles(0,1,2); //TODO：作者这打印的不是欧拉角，欧拉角应该(2,1,0)分别对应yaw, pitch, roll
+      // Eigen::Vector3d euler_ItoL = qItoLidar.toRotationMatrix().eulerAngles(0,1,2); //TODO：作者这打印的不是欧拉角，欧拉角应该(2,1,0)分别对应yaw, pitch, roll
+      Eigen::Vector3d euler_ItoL = qItoLidar.toRotationMatrix().eulerAngles(2,1,0);
       std::cout << "[Initialization] Done. Euler_ItoL initial degree: "
                 << (euler_ItoL*180.0/M_PI).transpose() << std::endl;
       calib_step_ = InitializationDone;
-      break;
+
+      // break;  //TODO default: break, we comment this line
     }
   }
 
@@ -169,9 +171,10 @@ void CalibrHelper::DataAssociation() {
 
   } else if (BatchOptimizationDone == calib_step_ || RefineDone == calib_step_) {//refine阶段
 
-    scan_undistortion_->undistortScanInMap();
+    scan_undistortion_->undistortScanInMap(); //default
+    ////scan_undistortion_->undistortScanInMap(false); //jxl 
 
-    plane_lambda_ = 0.7;
+    plane_lambda_ = 0.7; //TODO: default: 0.7
     surfel_association_->setPlaneLambda(plane_lambda_);
 
     auto ndt_omp = LiDAROdometry::ndtInit(ndt_resolution_);

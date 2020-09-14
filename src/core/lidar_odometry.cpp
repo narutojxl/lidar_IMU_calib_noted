@@ -109,8 +109,8 @@ bool LiDAROdometry::checkKeyScan(const OdomData& odom_data) {
     delta_angle(i) = normalize_angle(delta_angle(i));
   delta_angle = delta_angle.cwiseAbs();
 
-  if (key_frame_index_.size() == 0 || dist > 0.2 //key_frame_index_.size() == 0: 最开始的第一帧也是关键帧
-     || delta_angle(0) > 5.0 || delta_angle(1) > 5.0 || delta_angle(2) > 5.0) {
+  if (key_frame_index_.size() == 0 || dist > 0.1 //key_frame_index_.size() == 0: 最开始的第一帧也是关键帧  //default: 0.2m
+     || delta_angle(0) > 3.0 || delta_angle(1) > 3.0 || delta_angle(2) > 3.0) { //default: 5.0度
     position_last = position_now;
     ypr_last = ypr;
     return true;

@@ -93,7 +93,7 @@ void TrajectoryManager::trajInitFromSurfel(
   // addCallback(estimator_split);
 
   //printErrorStatistics("Before optimization");
-  ceres::Solver::Summary summary = estimator_split->Solve(50, false); //default: 30次，调用SplitTrajEstimator类的接口
+  ceres::Solver::Summary summary = estimator_split->Solve(200, false); //TODO: default: 30次，调用SplitTrajEstimator类的接口
   std::cout << summary.BriefReport() << std::endl;
   printErrorStatistics("After optimization");
 
@@ -234,8 +234,8 @@ void TrajectoryManager::printErrorStatistics(const std::string& intro, bool show
   if (show_gyro && !gyro_list_.empty()) {
     Eigen::Vector3d error_sum;
     for(auto const& m : gyro_list_) {
-      // error_sum += m->ErrorRaw<SplitTrajectory> (*traj_).cwiseAbs(); //default: unweight error
-         error_sum += m->Error<SplitTrajectory> (*traj_).cwiseAbs(); //jxl: weighted error
+      error_sum += m->ErrorRaw<SplitTrajectory> (*traj_).cwiseAbs(); //default: unweight error
+      //  error_sum += m->Error<SplitTrajectory> (*traj_).cwiseAbs(); //jxl: weighted error
       //TODO: https://github.com/APRIL-ZJU/lidar_IMU_calib/issues/2
     }
 
@@ -246,8 +246,8 @@ void TrajectoryManager::printErrorStatistics(const std::string& intro, bool show
   if (show_accel && !accel_list_.empty()) {
     Eigen::Vector3d error_sum;
     for(auto const& m : accel_list_) {
-      // error_sum += m->ErrorRaw<SplitTrajectory> (*traj_).cwiseAbs(); //default: unweight error
-         error_sum += m->Error<SplitTrajectory> (*traj_).cwiseAbs(); //weighted error
+      error_sum += m->ErrorRaw<SplitTrajectory> (*traj_).cwiseAbs(); //default: unweight error
+      //  error_sum += m->Error<SplitTrajectory> (*traj_).cwiseAbs(); //weighted error
     }
     std::cout << "[Accel] Error size, average: " << accel_list_.size()
               << ";  " << (error_sum/accel_list_.size()).transpose() << std::endl;
@@ -256,8 +256,8 @@ void TrajectoryManager::printErrorStatistics(const std::string& intro, bool show
   if (show_lidar && !surfelpoint_list_.empty()) {
     Eigen::Matrix<double,1,1>  error_sum;
     for (auto const &m : surfelpoint_list_) {
-      // error_sum += m->point2plane<SplitTrajectory>(*traj_).cwiseAbs(); //default: unweight error  
-         error_sum += m->point2plane<SplitTrajectory>(*traj_).cwiseAbs() * m->weight;  //weighted error
+      error_sum += m->point2plane<SplitTrajectory>(*traj_).cwiseAbs(); //default: unweight error  
+      //  error_sum += m->point2plane<SplitTrajectory>(*traj_).cwiseAbs() * m->weight;  //weighted error
     }
     std::cout << "[LiDAR] Error size, average: " << surfelpoint_list_.size()
               << "; " << (error_sum/surfelpoint_list_.size()).transpose() << std::endl;

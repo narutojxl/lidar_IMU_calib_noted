@@ -201,7 +201,8 @@ void CalibInterface::renderingLoop() {
 void CalibInterface::showCalibResult() {
   CalibParamManager::Ptr v = traj_manager_->getCalibParamManager();
 
-  Eigen::Vector3d euler_ItoL = (v->q_LtoI.conjugate()).toRotationMatrix().eulerAngles(0,1,2);
+  // Eigen::Vector3d euler_ItoL = (v->q_LtoI.conjugate()).toRotationMatrix().eulerAngles(0,1,2); //TODO：作者这打印的不是欧拉角
+  Eigen::Vector3d euler_ItoL = (v->q_LtoI.conjugate()).toRotationMatrix().eulerAngles(2,1,0);
   euler_ItoL = euler_ItoL * 180 / M_PI;
 
   TranslationVector g, gb, ab, tra, q;

@@ -152,7 +152,7 @@ bool isExtensionSupported(const char *extList, const char *extension)
 
     // If minimum requested isn't available, return the best that is.
     if(chosen_fbc_id < 0) {
-        pango_print_warn("Framebuffer with requested attributes not available. Using available framebuffer. You may see visual artifacts.");
+        pango_print_warn("Framebuffer with requested attributes not available. Using available framebuffer. You may see visual artifacts.\n\n");
         chosen_fbc_id = best_fbc;
     }
 

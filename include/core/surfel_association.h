@@ -74,7 +74,7 @@ public:
 
   void averageDownSmaple(int num_points_max = 5);
 
-  void averageTimeDownSmaple(int step = 10);
+  void averageTimeDownSmaple(int step = 10); //TODO: default=10
 
   const Eigen::aligned_vector<SurfelPlane>& get_surfel_planes() const {
     return surfel_planes_;

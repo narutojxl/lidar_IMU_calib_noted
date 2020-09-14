@@ -7,6 +7,8 @@
         "deque": "cpp",
         "string": "cpp",
         "vector": "cpp",
-        "memory": "cpp"
+        "memory": "cpp",
+        "core": "cpp",
+        "numericaldiff": "cpp"
     }
 }

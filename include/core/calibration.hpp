@@ -88,12 +88,14 @@ public:
   }
 
   void showStates() const {
-    Eigen::Vector3d euler_LtoI = q_LtoI.toRotationMatrix().eulerAngles(0,1,2); //TODO：作者的欧拉角是0,1,2，不是2,1,0
+    // Eigen::Vector3d euler_LtoI = q_LtoI.toRotationMatrix().eulerAngles(0,1,2); //TODO：作者的欧拉角是0,1,2，不是2,1,0
+    Eigen::Vector3d euler_LtoI = q_LtoI.toRotationMatrix().eulerAngles(2,1,0); //jxl
     euler_LtoI = euler_LtoI * 180 / M_PI;
 
     Eigen::Quaterniond q_ItoL = q_LtoI.inverse();
     Eigen::Vector3d p_IinL = q_ItoL * (-p_LinI);
-    Eigen::Vector3d euler_ItoL = q_ItoL.toRotationMatrix().eulerAngles(0,1,2); //同上
+    // Eigen::Vector3d euler_ItoL = q_ItoL.toRotationMatrix().eulerAngles(0,1,2); //同上
+    Eigen::Vector3d euler_ItoL = q_ItoL.toRotationMatrix().eulerAngles(2,1,0);
     euler_ItoL = euler_ItoL * 180 / M_PI;
 
     std::cout << "P_LinI      : " << p_LinI.transpose() << std::endl;
