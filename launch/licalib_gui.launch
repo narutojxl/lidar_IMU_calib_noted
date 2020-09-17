@@ -8,16 +8,16 @@
     <!--indoor: Garage-01.bag series       outdoor: Court-01.bag  series-->
 
     <arg name="topic_imu"           default="/imu/data" />
-    <arg name="path_bag"            default ="/home/$(env USER)/2020-09-11-19-41-22.bag" /> 
+    <arg name="path_bag"            default ="/home/$(env USER)/Documents/lidar_imu_calib_result/C1_11F_lidar_imu_sampledata/2020-09-16-15-59-39_big_house.bag" /> 
 
 
     <arg name="bag_start"           default="1" />
-    <arg name="bag_durr"            default="60" />   <!--30-->
+    <arg name="bag_durr"            default="100" />   <!--30-->
     <arg name="scan4map"            default="40" />   <!--15-->
     <arg name="lidar_model"         default="VLP_16" />
     <arg name="ndtResolution"       default="0.5" /> <!-- 0.5 for indoor case and 1.0 for outdoor case -->
 
-    <arg name="time_offset_padding" default="0.015" />
+    <arg name="time_offset_padding" default="0.001" /> <!--0.015-->
     <arg name="show_ui"    default="true" />
 
     <node pkg="li_calib" type="li_calib_gui" name="li_calib_gui" output="screen">

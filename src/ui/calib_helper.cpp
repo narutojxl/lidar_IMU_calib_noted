@@ -136,13 +136,13 @@ void CalibrHelper::Initialization() {
       Eigen::Quaterniond qItoLidar = rotation_initializer_->getQ_ItoS();
       traj_manager_->getCalibParamManager()->set_q_LtoI(qItoLidar.conjugate());
 
-      // Eigen::Vector3d euler_ItoL = qItoLidar.toRotationMatrix().eulerAngles(0,1,2); //TODO：作者这打印的不是欧拉角，欧拉角应该(2,1,0)分别对应yaw, pitch, roll
-      Eigen::Vector3d euler_ItoL = qItoLidar.toRotationMatrix().eulerAngles(2,1,0);
+      Eigen::Vector3d euler_ItoL = qItoLidar.toRotationMatrix().eulerAngles(0,1,2); //TODO：作者这打印的不是欧拉角，欧拉角应该(2,1,0)分别对应yaw, pitch, roll
+      // Eigen::Vector3d euler_ItoL = qItoLidar.toRotationMatrix().eulerAngles(2,1,0);
       std::cout << "[Initialization] Done. Euler_ItoL initial degree: "
                 << (euler_ItoL*180.0/M_PI).transpose() << std::endl;
       calib_step_ = InitializationDone;
 
-      // break;  //TODO default: break, we comment this line
+      break;  //TODO default: break, we comment this line
     }
   }
 
