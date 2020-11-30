@@ -174,7 +174,8 @@ void CalibrHelper::DataAssociation() {
     scan_undistortion_->undistortScanInMap(); //default
     ////scan_undistortion_->undistortScanInMap(false); //jxl 
 
-    plane_lambda_ = 0.7; //TODO: default: 0.7
+    // plane_lambda_ = 0.7; //TODO: default: 0.7
+    
     surfel_association_->setPlaneLambda(plane_lambda_);
 
     auto ndt_omp = LiDAROdometry::ndtInit(ndt_resolution_);

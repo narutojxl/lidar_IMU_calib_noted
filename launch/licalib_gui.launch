@@ -7,8 +7,8 @@
     <!--arg name="path_bag"            default ="$(find li_calib)/li_calib_data/Court-01.bag" /--> 
     <!--indoor: Garage-01.bag series       outdoor: Court-01.bag  series-->
 
-    <arg name="topic_imu"           default="/imu/data" />
-    <arg name="path_bag"            default ="/home/$(env USER)/Documents/lidar_imu_calib_result/C1_11F_lidar_imu_sampledata/2020-09-16-15-59-39_big_house.bag" /> 
+    <arg name="topic_imu"           default="/imu_data_adis16480" />  <!-- /imu/data -->
+    <arg name="path_bag"            default ="/home/$(env USER)/Documents/lidar_imu_calib_result/2020-09-21-14-55-06_ADI16480_F11_big_house.bag" /> 
 
 
     <arg name="bag_start"           default="1" />
